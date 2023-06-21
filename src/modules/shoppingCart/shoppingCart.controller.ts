@@ -21,4 +21,9 @@ export class ShoppingCartController {
   ) {
     return await this.shoppingCartService.removeProductInShoppingCart(data);
   }
+
+  @EventPattern('view')
+  async view() {
+    return await this.shoppingCartService.view();
+  }
 }

@@ -172,4 +172,57 @@ export class ShoppingCartService {
       return new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async view() {
+    try {
+      const shoppingCartInProgress = await this.shoppingCartRepository.findOne({
+        where: {
+          userId: '123',
+          status: ShoppingCartStatus.IN_PROGRESS,
+          deletedAt: IsNull(),
+        },
+      });
+
+      if (!shoppingCartInProgress)
+        return new HttpException(
+          'Not exist shopping cart from this user id',
+          HttpStatus.BAD_REQUEST,
+        );
+
+      const shoppingCartProducts =
+        await this.shoppingCartProductRepository.find({
+          where: {
+            userId: '123',
+            shoppingCartId: shoppingCartInProgress.id,
+            deletedAt: IsNull(),
+          },
+        });
+
+      const productArray = [];
+      let totalPrice = 0;
+      let totalQuantity = 0;
+
+      for (const shoppingCartProduct of shoppingCartProducts) {
+        totalPrice += shoppingCartProduct.price * shoppingCartProduct.quantity;
+        totalQuantity += shoppingCartProduct.quantity;
+        productArray.push({
+          productId: shoppingCartProduct.productId,
+          price: shoppingCartProduct.price,
+          quantity: shoppingCartProduct.quantity,
+        });
+      }
+
+      return {
+        shoppingCart: {
+          shoppingCartId: shoppingCartInProgress.id,
+          userId: '123',
+          totalPrice,
+          totalQuantity,
+          products: productArray,
+        },
+      };
+    } catch (error) {
+      return new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }
