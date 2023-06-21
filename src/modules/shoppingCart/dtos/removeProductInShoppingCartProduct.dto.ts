@@ -9,4 +9,7 @@ export class RemoveProductInShoppingCartProductDto
 
   @IsNotEmpty()
   quantity: number;
+
+  @IsNotEmpty()
+  price: number;
 }
