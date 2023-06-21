@@ -127,12 +127,29 @@ export class ShoppingCartService {
 
       if (shoppingCartProducts.quantity === data.product.quantity) {
         await this.shoppingCartProductRepository
-          .createQueryBuilder('users')
+          .createQueryBuilder()
           .delete()
           .from(ShoppingCartProductEntity)
           .where('id = :id', { id: shoppingCartProducts.id })
           .execute();
 
+        const products = await this.shoppingCartProductRepository.find({
+          where: {
+            shoppingCartId: shoppingCartInProgress.id,
+            userId: data.userId,
+          },
+        });
+
+        if (!products.length) {
+          await this.shoppingCartRepository
+            .createQueryBuilder()
+            .update(ShoppingCartEntity)
+            .set({
+              status: ShoppingCartStatus.CANCELED,
+            })
+            .where('id = :id', { id: shoppingCartInProgress.id })
+            .execute();
+        }
         return {
           message: 'Removed product from the shopping cart',
         };
@@ -149,7 +166,7 @@ export class ShoppingCartService {
         .execute();
 
       return {
-        message: 'Remoed product from the shopping cart',
+        message: 'Removed product from the shopping cart',
       };
     } catch (error) {
       return new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
