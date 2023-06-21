@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { ShoppingCartService } from './shoppingCart.service';
 import { AddProductInShoppingCartDto } from './dtos/addProductInShoppingCart.dto';
 import { RemoveProductInShoppingCartDto } from './dtos/removeProductInShoppingCart.dto';
+import { ViewShoppingCartDto } from './dtos/viewShoppingCart.dto';
 
 export class ShoppingCartController {
   constructor(
@@ -22,8 +23,8 @@ export class ShoppingCartController {
     return await this.shoppingCartService.removeProductInShoppingCart(data);
   }
 
-  @EventPattern('view')
-  async view() {
-    return await this.shoppingCartService.view();
+  @EventPattern('view_shopping_cart')
+  async viewShoppingCart(@Payload() data: ViewShoppingCartDto) {
+    return await this.shoppingCartService.viewShoppingCart(data);
   }
 }

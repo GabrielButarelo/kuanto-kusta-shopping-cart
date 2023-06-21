@@ -6,6 +6,7 @@ import { IsNull, Repository } from 'typeorm';
 import { ShoppingCartProductEntity } from './shoppingCartProduct.entity';
 import { ShoppingCartStatus } from './enums/shoppingCartStatus.enum';
 import { RemoveProductInShoppingCartDto } from './dtos/removeProductInShoppingCart.dto';
+import { ViewShoppingCartDto } from './dtos/viewShoppingCart.dto';
 
 @Injectable()
 export class ShoppingCartService {
@@ -173,11 +174,11 @@ export class ShoppingCartService {
     }
   }
 
-  async view() {
+  async viewShoppingCart(data: ViewShoppingCartDto) {
     try {
       const shoppingCartInProgress = await this.shoppingCartRepository.findOne({
         where: {
-          userId: '123',
+          userId: data.userId,
           status: ShoppingCartStatus.IN_PROGRESS,
           deletedAt: IsNull(),
         },
@@ -192,7 +193,7 @@ export class ShoppingCartService {
       const shoppingCartProducts =
         await this.shoppingCartProductRepository.find({
           where: {
-            userId: '123',
+            userId: data.userId,
             shoppingCartId: shoppingCartInProgress.id,
             deletedAt: IsNull(),
           },
@@ -215,7 +216,7 @@ export class ShoppingCartService {
       return {
         shoppingCart: {
           shoppingCartId: shoppingCartInProgress.id,
-          userId: '123',
+          userId: data.userId,
           totalPrice,
           totalQuantity,
           products: productArray,
