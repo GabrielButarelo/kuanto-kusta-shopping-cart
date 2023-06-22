@@ -6,9 +6,10 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
+import { IShoppingCartProductEntity } from './interfaces/shoppingCartProductEntity.interface';
 
 @Entity()
-export class ShoppingCartProductEntity {
+export class ShoppingCartProductEntity implements IShoppingCartProductEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -35,4 +36,16 @@ export class ShoppingCartProductEntity {
 
   @DeleteDateColumn()
   deletedAt: Date | null;
+
+  constructor(shoppingCartProduct?: Partial<ShoppingCartProductEntity>) {
+    this.id = shoppingCartProduct?.id;
+    this.shoppingCartId = shoppingCartProduct?.shoppingCartId;
+    this.productId = shoppingCartProduct?.productId;
+    this.userId = shoppingCartProduct?.userId;
+    this.price = shoppingCartProduct?.price;
+    this.quantity = shoppingCartProduct?.quantity;
+    this.createdAt = shoppingCartProduct?.createdAt;
+    this.updatedAt = shoppingCartProduct?.updatedAt;
+    this.deletedAt = shoppingCartProduct?.deletedAt;
+  }
 }

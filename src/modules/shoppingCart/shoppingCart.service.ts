@@ -1,4 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { AddProductInShoppingCartDto } from './dtos/addProductInShoppingCart.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ShoppingCartEntity } from './shoppingCart.entity';
@@ -7,6 +12,7 @@ import { ShoppingCartProductEntity } from './shoppingCartProduct.entity';
 import { ShoppingCartStatus } from './enums/shoppingCartStatus.enum';
 import { RemoveProductInShoppingCartDto } from './dtos/removeProductInShoppingCart.dto';
 import { ViewShoppingCartDto } from './dtos/viewShoppingCart.dto';
+import { IAddProductInShoppingCartResponse } from './interfaces/addProductInShoppingCartResponse.interface';
 
 @Injectable()
 export class ShoppingCartService {
@@ -17,7 +23,9 @@ export class ShoppingCartService {
     private shoppingCartProductRepository: Repository<ShoppingCartProductEntity>,
   ) {}
 
-  async addProductInShoppingCart(data: AddProductInShoppingCartDto) {
+  async addProductInShoppingCart(
+    data: AddProductInShoppingCartDto,
+  ): Promise<InternalServerErrorException | IAddProductInShoppingCartResponse> {
     try {
       let shoppingCartInProgress = await this.shoppingCartRepository.findOne({
         where: {
@@ -61,30 +69,21 @@ export class ShoppingCartService {
 
         return {
           message: 'Added product in shopping cart',
-          data: {
-            ...shoppingCartProductExist,
-          },
         };
       }
 
-      const updateShoppingCartProduct = await this.shoppingCartProductRepository
-        .createQueryBuilder()
-        .update(ShoppingCartProductEntity)
-        .set({
-          quantity: shoppingCartProductExist.quantity + data.product.quantity,
-          updatedAt: new Date(),
-        })
-        .where('id = :id', { id: shoppingCartProductExist.id })
-        .execute();
+      this.shoppingCartProductRepository.merge(shoppingCartProductExist, {
+        quantity: shoppingCartProductExist.quantity + data.product.quantity,
+        updatedAt: new Date(),
+      });
+
+      await this.shoppingCartProductRepository.save(shoppingCartProductExist);
 
       return {
         message: 'Added product in shopping cart',
-        data: {
-          ...updateShoppingCartProduct,
-        },
       };
     } catch (error) {
-      return new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new InternalServerErrorException(error.message);
     }
   }
 

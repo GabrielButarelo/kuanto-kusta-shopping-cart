@@ -7,9 +7,10 @@ import {
   DeleteDateColumn,
 } from 'typeorm';
 import { ShoppingCartStatus } from './enums/shoppingCartStatus.enum';
+import { IShoppingCartEntity } from './interfaces/shoppingCartEntity.interface';
 
 @Entity()
-export class ShoppingCartEntity {
+export class ShoppingCartEntity implements IShoppingCartEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -19,7 +20,7 @@ export class ShoppingCartEntity {
   @Column({
     enum: [ShoppingCartStatus.CANCELED, ShoppingCartStatus.IN_PROGRESS],
   })
-  status: string;
+  status: ShoppingCartStatus;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -29,4 +30,13 @@ export class ShoppingCartEntity {
 
   @DeleteDateColumn()
   deletedAt: Date | null;
+
+  constructor(shoppingCart?: Partial<ShoppingCartEntity>) {
+    this.id = shoppingCart?.id;
+    this.userId = shoppingCart?.userId;
+    this.status = shoppingCart?.status;
+    this.createdAt = shoppingCart?.createdAt;
+    this.updatedAt = shoppingCart?.updatedAt;
+    this.deletedAt = shoppingCart?.deletedAt;
+  }
 }
