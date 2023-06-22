@@ -1,6 +1,5 @@
 import {
-  HttpException,
-  HttpStatus,
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -13,6 +12,8 @@ import { ShoppingCartStatus } from './enums/shoppingCartStatus.enum';
 import { RemoveProductInShoppingCartDto } from './dtos/removeProductInShoppingCart.dto';
 import { ViewShoppingCartDto } from './dtos/viewShoppingCart.dto';
 import { IAddProductInShoppingCartResponse } from './interfaces/addProductInShoppingCartResponse.interface';
+import { IRemoveProductInShoppingCartResponse } from './interfaces/removeProductInShoppingCartResponse.interface';
+import { IViewShoppingCartResponse } from './interfaces/viewShoppingCartResponse.interface';
 
 @Injectable()
 export class ShoppingCartService {
@@ -87,7 +88,13 @@ export class ShoppingCartService {
     }
   }
 
-  async removeProductInShoppingCart(data: RemoveProductInShoppingCartDto) {
+  async removeProductInShoppingCart(
+    data: RemoveProductInShoppingCartDto,
+  ): Promise<
+    | BadRequestException
+    | InternalServerErrorException
+    | IRemoveProductInShoppingCartResponse
+  > {
     try {
       const shoppingCartInProgress = await this.shoppingCartRepository.findOne({
         where: {
@@ -98,9 +105,8 @@ export class ShoppingCartService {
       });
 
       if (!shoppingCartInProgress)
-        return new HttpException(
+        return new BadRequestException(
           'Not found shopping cart for this user id',
-          HttpStatus.BAD_REQUEST,
         );
 
       const shoppingCartProducts =
@@ -114,24 +120,19 @@ export class ShoppingCartService {
         });
 
       if (!shoppingCartProducts)
-        return new HttpException(
+        return new BadRequestException(
           'Not found product id in the shopping cart for this user id',
-          HttpStatus.BAD_REQUEST,
         );
 
       if (shoppingCartProducts.quantity < data.product.quantity)
-        return new HttpException(
+        return new BadRequestException(
           'The quantity of the product requested for removal is greater than the quantity of the product in the shopping cart',
-          HttpStatus.BAD_REQUEST,
         );
 
       if (shoppingCartProducts.quantity === data.product.quantity) {
-        await this.shoppingCartProductRepository
-          .createQueryBuilder()
-          .delete()
-          .from(ShoppingCartProductEntity)
-          .where('id = :id', { id: shoppingCartProducts.id })
-          .execute();
+        await this.shoppingCartProductRepository.softDelete(
+          shoppingCartProducts.id,
+        );
 
         const products = await this.shoppingCartProductRepository.find({
           where: {
@@ -141,39 +142,40 @@ export class ShoppingCartService {
         });
 
         if (!products.length) {
-          await this.shoppingCartRepository
-            .createQueryBuilder()
-            .update(ShoppingCartEntity)
-            .set({
-              status: ShoppingCartStatus.CANCELED,
-            })
-            .where('id = :id', { id: shoppingCartInProgress.id })
-            .execute();
+          this.shoppingCartRepository.merge(shoppingCartInProgress, {
+            status: ShoppingCartStatus.CANCELED,
+            updatedAt: new Date(),
+          });
+
+          await this.shoppingCartProductRepository.save(shoppingCartInProgress);
         }
         return {
           message: 'Removed product from the shopping cart',
         };
       }
 
-      await this.shoppingCartProductRepository
-        .createQueryBuilder()
-        .update(ShoppingCartProductEntity)
-        .set({
-          quantity: shoppingCartProducts.quantity - data.product.quantity,
-          updatedAt: new Date(),
-        })
-        .where('id = :id', { id: shoppingCartProducts.id })
-        .execute();
+      this.shoppingCartProductRepository.merge(shoppingCartProducts, {
+        quantity: shoppingCartProducts.quantity - data.product.quantity,
+        updatedAt: new Date(),
+      });
+
+      await this.shoppingCartProductRepository.save(shoppingCartProducts);
 
       return {
         message: 'Removed product from the shopping cart',
       };
     } catch (error) {
-      return new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new InternalServerErrorException(error.message);
     }
   }
 
-  async viewShoppingCart(data: ViewShoppingCartDto) {
+  async viewShoppingCart(
+    data: ViewShoppingCartDto,
+  ): Promise<
+    | BadRequestException
+    | InternalServerErrorException
+    | IViewShoppingCartResponse
+  > {
     try {
       const shoppingCartInProgress = await this.shoppingCartRepository.findOne({
         where: {
@@ -184,9 +186,8 @@ export class ShoppingCartService {
       });
 
       if (!shoppingCartInProgress)
-        return new HttpException(
+        return new BadRequestException(
           'Not exist shopping cart from this user id',
-          HttpStatus.BAD_REQUEST,
         );
 
       const shoppingCartProducts =
@@ -222,7 +223,7 @@ export class ShoppingCartService {
         },
       };
     } catch (error) {
-      return new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      return new InternalServerErrorException(error.message);
     }
   }
 }
